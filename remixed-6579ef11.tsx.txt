@@ -1,0 +1,324 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Play, Pause, RotateCcw } from 'lucide-react';
+
+const TasbihCounter = () => {
+  const [count, setCount] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+  const [round, setRound] = useState(1);
+  const [showMessage, setShowMessage] = useState(false);
+  const [flashEffect, setFlashEffect] = useState(false);
+  const [showFinalMessage, setShowFinalMessage] = useState(false);
+  const intervalRef = useRef(null);
+  const pauseTimeoutRef = useRef(null);
+
+  const dhikrTexts = [
+    "سُبْحَانَ اللَّهِ",
+    "الْحَمْدُ لِلَّهِ", 
+    "اللَّهُ أَكْبَرُ"
+  ];
+
+  const dhikrTranslations = [
+    "SubhanAllah (Glory be to Allah)",
+    "Alhamdulillah (All praise is due to Allah)",
+    "Allahu Akbar (Allah is the Greatest)"
+  ];
+
+  useEffect(() => {
+    if (isRunning) {
+      intervalRef.current = setInterval(() => {
+        setCount(prevCount => {
+          const newCount = prevCount + 1;
+          
+          // Flash effect on each count
+          setFlashEffect(true);
+          setTimeout(() => setFlashEffect(false), 200);
+          
+          // Check if we've reached 33
+          if (newCount === 33) {
+            setIsRunning(false);
+            
+            if (round < 3) {
+              // Haptic feedback for round change
+              if (navigator.vibrate) {
+                navigator.vibrate([200, 100, 200]); // Double vibration pattern
+              }
+              
+              // Go to next round immediately without pause
+              setTimeout(() => {
+                setCount(0);
+                setRound(prevRound => prevRound + 1);
+              }, 100);
+            } else {
+              // Show final message after completing all 3 rounds (99 total)
+              // Take a 1 second pause before showing final screen
+              setTimeout(() => {
+                setShowFinalMessage(true);
+                
+                // Reset everything after 10 seconds
+                setTimeout(() => {
+                  setShowFinalMessage(false);
+                  setRound(1);
+                  setCount(0);
+                  
+                  // Haptic feedback for reset to round 1
+                  if (navigator.vibrate) {
+                    navigator.vibrate([100, 50, 100, 50, 100]); // Triple vibration pattern
+                  }
+                }, 10000);
+              }, 1000);
+            }
+          }
+          
+          return newCount;
+        });
+      }, 1200); // Auto-increment every 1.2 seconds
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      if (pauseTimeoutRef.current) {
+        clearTimeout(pauseTimeoutRef.current);
+      }
+    };
+  }, [isRunning, round]);
+
+  const startCounting = () => {
+    setIsRunning(true);
+    setShowMessage(false);
+    setShowFinalMessage(false);
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current);
+    }
+  };
+
+  const pauseCounting = () => {
+    setIsRunning(false);
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current);
+    }
+  };
+
+  const restartCounting = () => {
+    setIsRunning(false);
+    setCount(0);
+    setRound(1);
+    setShowMessage(false);
+    setShowFinalMessage(false);
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current);
+    }
+  };
+
+  const manualIncrement = () => {
+    if (!isRunning && !showFinalMessage && count < 33) {
+      setCount(prevCount => {
+        const newCount = prevCount + 1;
+        
+        // Flash effect
+        setFlashEffect(true);
+        setTimeout(() => setFlashEffect(false), 200);
+        
+        if (newCount === 33) {
+          if (round < 3) {
+            // Haptic feedback for round change
+            if (navigator.vibrate) {
+              navigator.vibrate([200, 100, 200]); // Double vibration pattern
+            }
+            
+            // Go to next round immediately without pause
+            setTimeout(() => {
+              setCount(0);
+              setRound(prevRound => prevRound + 1);
+            }, 500);
+          } else {
+            // Show final message after completing all 3 rounds (99 total)
+            // Take a 1 second pause before showing final screen
+            setTimeout(() => {
+              setShowFinalMessage(true);
+              
+              // Reset everything after 10 seconds
+              setTimeout(() => {
+                setShowFinalMessage(false);
+                setRound(1);
+                setCount(0);
+                
+                // Haptic feedback for reset to round 1
+                if (navigator.vibrate) {
+                  navigator.vibrate([100, 50, 100, 50, 100]); // Triple vibration pattern
+                }
+              }, 10000);
+            }, 1000);
+          }
+        }
+        
+        return newCount;
+      });
+    }
+  };
+
+  const totalCount = (round - 1) * 33 + count;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+            Tasbih Counter
+          </h1>
+          <div className="text-gray-700 text-lg mb-1 font-arabic">
+            بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+          </div>
+          <div className="text-gray-600 text-sm mb-1">
+            Bismillah ar-Rahman ar-Raheem
+          </div>
+          <p className="text-gray-600 text-sm">
+            Begin with the name of Allah The Entirely Merciful The Especially Merciful
+          </p>
+        </div>
+
+        {/* Current Dhikr Display */}
+        {showFinalMessage ? (
+          <div className="mb-8 p-12 bg-gradient-to-r from-purple-600 to-indigo-700 rounded-2xl text-white text-center">
+            <div className="text-5xl md:text-6xl font-arabic mb-6 leading-tight">
+              لَا إِلَٰهَ إِلَّا اللَّهُ
+            </div>
+            <div className="text-lg md:text-xl opacity-90 mb-4">
+              La ilaha illa Allah
+            </div>
+            <div className="text-base opacity-90 mb-6">
+              (There is no god but Allah)
+            </div>
+            <div className="text-sm opacity-75">
+              Resetting in 10 seconds...
+            </div>
+          </div>
+        ) : (
+          <div className="mb-8 p-6 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl text-white">
+            <div className="text-3xl font-arabic mb-2">
+              {dhikrTexts[round - 1]}
+            </div>
+            <div className="text-sm opacity-90">
+              {dhikrTranslations[round - 1]}
+            </div>
+          </div>
+        )}
+
+        {/* Counter Display */}
+        {!showFinalMessage && (
+          <div 
+            className={`mb-8 p-8 rounded-2xl transition-all duration-200 cursor-pointer ${
+              flashEffect 
+                ? 'bg-yellow-200 scale-105 shadow-lg' 
+                : 'bg-gray-50 hover:bg-gray-100'
+            }`}
+            onClick={manualIncrement}
+          >
+            <div className="text-6xl font-bold text-gray-800 mb-2">
+              {count}
+            </div>
+            <div className="text-sm text-gray-600">
+              Current Round • Total: {totalCount}/99
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {isRunning ? "Pause to manually tap and count" : "Tap to count manually"}
+            </div>
+          </div>
+        )}
+
+        {/* Message Display */}
+        {showMessage && (
+          <div className="mb-6 p-4 bg-green-100 border border-green-300 rounded-xl">
+            <div className="text-green-800 font-semibold">
+              {round < 3 ? `Round ${round} Complete!` : 'All 3 Rounds Complete!'}
+            </div>
+            <div className="text-green-700 text-sm mt-1">
+              {round < 3 
+                ? `Continue with: ${dhikrTranslations[round]}`
+                : 'Starting over with SubhanAllah'
+              }
+            </div>
+            <div className="text-green-600 text-xs mt-2">
+              Auto-continuing in 5 seconds...
+            </div>
+          </div>
+        )}
+
+        {/* Control Buttons */}
+        {!showFinalMessage && (
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={isRunning ? pauseCounting : startCounting}
+              className={`flex-1 flex items-center justify-center gap-1 text-white px-3 py-2.5 rounded-full font-medium text-sm transition-colors ${
+                isRunning 
+                  ? 'bg-amber-600 hover:bg-amber-700' 
+                  : 'bg-emerald-600 hover:bg-emerald-700'
+              }`}
+            >
+              {isRunning ? <Pause size={16} /> : <Play size={16} />}
+              {isRunning ? 'Pause' : 'Auto Count'}
+            </button>
+            
+            <button
+              onClick={restartCounting}
+              className="flex-1 flex items-center justify-center gap-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2.5 rounded-full font-medium text-sm transition-colors"
+            >
+              <RotateCcw size={16} />
+              Restart
+            </button>
+          </div>
+        )}
+
+        {/* Progress Indicator */}
+        {!showFinalMessage && (
+          <div className="mt-6">
+            <div className="flex justify-between text-xs text-gray-500 mb-2">
+              <span>Progress</span>
+              <span>{count}/33</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-emerald-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(count / 33) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Round Indicators */}
+        {!showFinalMessage && (
+          <div className="flex justify-center gap-2 mt-4">
+            {[1, 2, 3].map((roundNum) => (
+              <div
+                key={roundNum}
+                className={`w-3 h-3 rounded-full transition-colors ${
+                  roundNum < round 
+                    ? 'bg-green-500' 
+                    : roundNum === round 
+                      ? 'bg-emerald-600' 
+                      : 'bg-gray-300'
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Credits */}
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <p className="text-xs text-gray-500 text-center">
+            Built by Zoyeb Batliwala from India<br />
+            Seeking prayers from fellow believers 🤲
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TasbihCounter;
